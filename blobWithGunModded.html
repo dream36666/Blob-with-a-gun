@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blob with a Gun MODDED v1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet">
+    <style>
+        body { display: flex; height: 100vh; justify-content: center; align-items: center; background-color: #111; color: white; font-family: sans-serif; margin: 0; overflow: hidden; flex-direction: column; }
+        canvas { display: none; }
+        #menu { display: flex; flex-direction: row; align-items: center; gap: 16px; }
+        button { font-size: 2rem; margin-top: 10px; padding: 0.5rem 1rem; background: #212121; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .title { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 100px; color: white; background: rgba(0, 0, 0, 0); padding: 10px; border-radius: 5px; font-family: "Bungee Spice", sans-serif; display: block; max-width: 90%; text-align: center; white-space: nowrap; }
+        .info { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 20px; color: white; background: rgba(0, 0, 0 ,0); padding: 5px; border-radius: 5px; font-family: sans-serif; display: block; max-width: 90%; text-align: center; }
+        #menu button:hover { color: white; transform: scale(1.05); transition: transform 0.3s; }
+        #startEasy { background-color: #4CAF50; }
+        #startMedium { background-color: #2196F3; }
+        #startHard { background-color: #FF9800; }
+        #startImpossible { background-color: #F44336; }
+        #menu button:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="title">BLOB WITH GUN<br></div>
+    <div class="info">v1.0.0<br>Ben Messer & Joshua Harding<br>Press a button to start</div>
+    <div id="menu">
+        <button id="startEasy" onclick="startGame('easy')">Easy</button>
+        <button id="startMedium" onclick="startGame('medium')">Medium</button>
+        <button id="startHard" onclick="startGame('hard')">Hard</button>
+        <button id="startImpossible" onclick="startGame('impossible')">Impossible</button>
+    </div>
+    <canvas id="game"></canvas>
+    <script>
+        function startGame(gameDifficulty) {
+            document.querySelector(".title").style.display = "none";
+            document.querySelector(".info").style.display = "none";
+            document.getElementById('menu').style.display = 'none';
+            const canvas = document.getElementById('game');
+            const ctx = canvas.getContext('2d');
+            canvas.style.display = 'block'; // Show canvas
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const difficultySettings = {
+                easy: {
+                    enemySpeed: 1,
+                    spawnChance: 0.02,
+                    shootInterval: 2000,
+                    bulletSpeed: 3,
+                    splatterSize: 50,
+                    maxEnemies: 10,
+                    maxBounces: 2
+                },
+                medium: {
+                    enemySpeed: 1.5,
+                    spawnChance: 0.05,
+                    shootInterval: 1500,
+                    bulletSpeed: 5,
+                    splatterSize: 30,
+                    maxEnemies: 20,
+                    maxBounces: 3
+                },
+                hard: {
+                    enemySpeed: 2,
+                    spawnChance: 0.08,
+                    shootInterval: 1200,
+                    bulletSpeed: 7,
+                    splatterSize: 20,
+                    maxEnemies: 30,
+                    maxBounces: 5
+                },
+                impossible: {
+                    enemySpeed: 2.5,
+                    spawnChance: 0.10,
+                    shootInterval: 1000,
+                    bulletSpeed: 10,
+                    splatterSize: 10,
+                    maxEnemies: Infinity,
+                    maxBounces: Infinity
+                }
+            };
+            const settings = difficultySettings[gameDifficulty];
+            const bullets = [];
+            const bloodSplatters = [];
+            const enemies = [{
+                x: 100,
+                y: 100,
+                radius: 20,
+                speed: settings.enemySpeed,
+                alive: true,
+                lastShotTime: 0,
+                shootInterval: settings.shootInterval
+            }];
+            let keys = {};
+            let mouse = { x: 0, y: 0 };
+            let youWin = false;
+            let gameOver = false;
+            const BASE_BULLET_RADIUS = 5;
+            const blob = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                radius: 20,
+                speed: 4
+            };
+            canvas.addEventListener('mousemove', e => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+            window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+            window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+            window.addEventListener('mousedown', () => {
+                if (gameOver) {
+                    restartGame();
+                    return;
+                }
+                shootBullet(blob.x, blob.y, mouse.x, mouse.y, 'player');
+            });
+            function shootBullet(fromX, fromY, toX, toY, owner) {
+                const angle = Math.atan2(toY - fromY, toX - fromX);
+                const offset = 30;
+                bullets.push({
+                    x: fromX + Math.cos(angle) * offset,
+                    y: fromY + Math.sin(angle) * offset,
+                    vx: Math.cos(angle) * settings.bulletSpeed,
+                    vy: Math.sin(angle) * settings.bulletSpeed,
+                    radius: BASE_BULLET_RADIUS,
+                    owner: owner,
+                    bounces: 0
+                });
+            }
+            function trySpawnEnemy() {
+                const maxEnemies = settings.maxEnemies;
+                if (enemies.length >= maxEnemies) return;
+                const scarcityFactor = Math.max(0, (maxEnemies - enemies.length) / maxEnemies);
+                if (Math.random() < settings.spawnChance * (scarcityFactor) * 10) {
+                    let spawnX, spawnY;
+                    const safeRadius = 300; // Minimum distance from player
+                    do {
+                        spawnX = Math.random() * canvas.width;
+                        spawnY = Math.random() * canvas.height;
+                    } while (Math.hypot(spawnX - blob.x, spawnY - blob.y) < safeRadius);
+                    enemies.push({
+                        x: spawnX,
+                        y: spawnY,
+                        radius: 20,
+                        speed: settings.enemySpeed,
+                        alive: true,
+                        lastShotTime: 0,
+                        shootInterval: settings.shootInterval
+                    });
+                }
+            }   
+            function update() {
+                if (gameOver) return;
+                if (keys['w']) blob.y -= blob.speed;
+                if (keys['s']) blob.y += blob.speed;
+                if (keys['a']) blob.x -= blob.speed;
+                if (keys['d']) blob.x += blob.speed;
+                if (
+                    blob.x < 0 || blob.x > canvas.width ||
+                    blob.y < 0 || blob.y > canvas.height
+                ) {
+                    gameOver = true;
+                    return;
+                }
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const b = bullets[i];
+                    b.x += b.vx;
+                    b.y += b.vy;
+                    if (b.x <= 0 || b.x >= canvas.width) {
+                        b.bounces++;
+                        if (b.bounces > settings.maxBounces) {
+                            bullets.splice(i, 1);
+                            continue;
+                        }
+                        b.vx *= -1;
+                        trySpawnEnemy();
+                    }
+                    if (b.y <= 0 || b.y >= canvas.height) {
+                        b.bounces++;
+                        if (b.bounces > settings.maxBounces) {
+                            bullets.splice(i, 1);
+                            continue;
+                        }
+                        b.vy *= -1;
+                        trySpawnEnemy();
+                    }
+                    const dxP = b.x - blob.x;
+                    const dyP = b.y - blob.y;
+                    const distP = Math.hypot(dxP, dyP);
+                    if (distP < blob.radius + b.radius) {
+                        gameOver = true;
+                    }
+                    for (const enemy of enemies) {
+                        if (!enemy.alive) continue;
+                        const dx = b.x - enemy.x;
+                        const dy = b.y - enemy.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < enemy.radius + b.radius) {
+                            if (b.radius > BASE_BULLET_RADIUS) {
+                                b.radius *= 0.75;
+                            } else {
+                                bullets.splice(i, 1);
+                            }
+                            // Splat that sucker
+                            bloodSplatters.push({
+                                x: enemy.x,
+                                y: enemy.y,
+                                radius: enemy.radius + settings.splatterSize
+                            });
+                            enemy.alive = false;
+                            break;
+                        }
+                    }
+                    if (b.radius < 1) bullets.splice(i, 1);
+                }
+                mergeBullets(bullets);
+                for (const enemy of enemies) {
+                    if (!enemy.alive) continue;
+                    const dx = blob.x - enemy.x;
+                    const dy = blob.y - enemy.y;
+                    const dist = Math.hypot(dx, dy);
+                    enemy.x += (dx / dist) * enemy.speed;
+                    enemy.y += (dy / dist) * enemy.speed;
+                    if (dist < blob.radius + enemy.radius) {
+                        gameOver = true;
+                    }
+                    const now = Date.now();
+                    if (now - enemy.lastShotTime > enemy.shootInterval) {
+                        shootBullet(enemy.x, enemy.y, blob.x, blob.y, 'enemy');
+                        enemy.lastShotTime = now;
+                    }
+                }
+                checkBloodFlood();
+            }
+            function checkBloodFlood() {
+                const totalArea = canvas.width * canvas.height;
+                const bloodArea = bloodSplatters.reduce((sum, s) => sum + Math.PI * s.radius * s.radius, 0);
+                const coverage = bloodArea / totalArea;
+                if (coverage >= 0.8 && !youWin) {
+                    youWin = true;
+                    gameOver = true; // Stops everything
+                }
+            }
+            function mergeBullets(arr) {
+                for (let i = 0; i < arr.length; i++) {
+                    const a = arr[i];
+                    for (let j = i + 1; j < arr.length; j++) {
+                        const b = arr[j];
+                        if (Math.abs(a.radius - b.radius) < 0.01) {
+                            const dx = a.x - b.x;
+                            const dy = a.y - b.y;
+                            const dist = Math.hypot(dx, dy);
+                            if (dist < a.radius + b.radius) {
+                                const pick = Math.random() < 0.5 ? a : b;
+                                const newVx = pick.vx * 0.95;
+                                const newVy = pick.vy * 0.95;
+                                const newX = (a.x + b.x) / 2;
+                                const newY = (a.y + b.y) / 2;
+                                const newRadius = a.radius * 1.25;
+                                const newOwner = a.owner === b.owner ? a.owner : 'neutral';
+                                arr.splice(j, 1);
+                                arr.splice(i, 1);
+                                arr.push({
+                                    x: newX,
+                                    y: newY,
+                                    vx: newVx,
+                                    vy: newVy,
+                                    radius: newRadius,
+                                    owner: newOwner
+                                });
+                                return mergeBullets(arr);
+                            }
+                        }
+                    }
+                }
+            }
+            function draw() {
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                // Blood first
+                for (const s of bloodSplatters) {
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#800';
+                    ctx.fill();
+                }
+                // Player
+                ctx.beginPath();
+                ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#f00';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(blob.x, blob.y);
+                ctx.lineTo(mouse.x, mouse.y);
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+                // Bullets
+                for (const b of bullets) {
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#f00';
+                    ctx.fill();
+                }
+                // Enemies
+                for (const enemy of enemies) {
+                    if (!enemy.alive) continue;
+                    ctx.beginPath();
+                    ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ff0';
+                    ctx.fill();
+                }
+                if (gameOver) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '48px sans-serif';
+                    ctx.textAlign = 'center';
+                    if (youWin) {
+                        ctx.fillText('YOU WIN! THE FLOOR RUNS RED', canvas.width / 2, canvas.height / 2);
+                        ctx.font = '24px sans-serif';
+                        ctx.fillText('Click to restart', canvas.width / 2, canvas.height / 2 + 50);
+                    } else {
+                        ctx.fillText('Game Over - Click to Restart', canvas.width / 2, canvas.height / 2);
+                    }
+                }
+            }
+            function gameLoop() {
+                update();
+                draw();
+                requestAnimationFrame(gameLoop);
+            }
+            function restartGame() {
+                blob.x = canvas.width / 2;
+                blob.y = canvas.height / 2;
+                bullets.length = 0;
+                enemies.length = 0;
+                bloodSplatters.length = 0;
+                enemies.push({
+                    x: 100,
+                    y: 100,
+                    radius: 20,
+                    speed: 2,
+                    alive: true,
+                    lastShotTime: 0,
+                    shootInterval: 1000
+                });
+                gameOver = false;
+                youWin = false;
+            }
+            gameLoop();
+        }
+    </script>
+</body>
+</html>
