@@ -20,7 +20,7 @@
 </head>
 <body>
     <div class="title">BLOB WITH A GUN<br></div>
-    <div class="info">v1.0.0<br>Ben Messer & Joshua Harding<br>Press a button to start</div>
+    <div class="info">v1.0.0<br>Ben Messer & Joshua Harding<br>Goal: Cover the entire battlefield in bloodPress a button to start</div>
     <div id="menu">
         <button id="startEasy" onclick="startGame('easy')">Easy</button>
         <button id="startMedium" onclick="startGame('medium')">Medium</button>
@@ -128,7 +128,7 @@
             function trySpawnEnemy() {
                 const maxEnemies = settings.maxEnemies;
                 const scarcityFactor = Math.max(0, (maxEnemies - enemies.length) / maxEnemies);
-                if (Math.random() < settings.spawnChance * (scarcityFactor) * 10) {
+                if (Math.random() < settings.spawnChance * (scarcityFactor) * 5) {
                     let spawnX, spawnY;
                     const safeRadius = 300; // Minimum distance from player
                     do {
