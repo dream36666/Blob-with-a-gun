@@ -236,45 +236,38 @@
                 checkBloodFlood();
             }
             function checkBloodFlood() {
-    const offCanvas = document.createElement('canvas');
-    offCanvas.width = canvas.width;
-    offCanvas.height = canvas.height;
-    const offCtx = offCanvas.getContext('2d');
-
-    // Draw each blood splatter
-    for (const s of bloodSplatters) {
-        offCtx.beginPath();
-        offCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-        offCtx.fillStyle = '#800'; // match your blood color
-        offCtx.fill();
-    }
-
-    // Get pixel data
-    const imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
-    const pixels = imageData.data;
-    let redPixelCount = 0;
-
-    for (let i = 0; i < pixels.length; i += 4) {
-        const r = pixels[i];
-        const g = pixels[i + 1];
-        const b = pixels[i + 2];
-        const a = pixels[i + 3];
-
-        // Count only fully visible dark red pixels
-        if (r >= 100 && g < 50 && b < 50 && a > 0) {
-            redPixelCount++;
-        }
-    }
-
-    const totalPixels = canvas.width * canvas.height;
-    const coverage = redPixelCount / totalPixels;
-
-    if (coverage >= 0.8 && !youWin) {
-        youWin = true;
-        gameOver = true;
-    }
-}
-
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = canvas.width;
+                offCanvas.height = canvas.height;
+                const offCtx = offCanvas.getContext('2d');
+                // Draw each blood splatter
+                for (const s of bloodSplatters) {
+                    offCtx.beginPath();
+                    offCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    offCtx.fillStyle = '#800'; // match your blood color
+                    offCtx.fill();
+                }
+                // Get pixel data
+                const imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+                const pixels = imageData.data;
+                let redPixelCount = 0;
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const r = pixels[i];
+                    const g = pixels[i + 1];
+                    const b = pixels[i + 2];
+                    const a = pixels[i + 3];
+                    // Count only fully visible dark red pixels
+                    if (r >= 100 && g < 50 && b < 50 && a > 0) {
+                        redPixelCount++;
+                    }
+                }
+                const totalPixels = canvas.width * canvas.height;
+                const coverage = redPixelCount / totalPixels;
+                if (coverage >= 0.9 && !youWin) {
+                    youWin = true;
+                    gameOver = true;
+                }
+            }
             function mergeBullets(arr) {
                 for (let i = 0; i < arr.length; i++) {
                     const a = arr[i];
