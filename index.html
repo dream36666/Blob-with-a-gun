@@ -263,7 +263,8 @@
                                     vx: newVx,
                                     vy: newVy,
                                     radius: newRadius,
-                                    owner: newOwner
+                                    owner: newOwner,
+                                    bounces: Math.random() < 0.5 ? a.bounces : b.bounces
                                 });
                                 return mergeBullets(arr);
                             }
