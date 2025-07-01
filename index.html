@@ -292,7 +292,7 @@
                 for (const s of bloodSplatters) {
                     offCtx.beginPath();
                     offCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-                    offCtx.fillStyle = '#800'; // match your blood color
+                    offCtx.fillStyle = '#800000'; // match your blood color
                     offCtx.fill();
                 }
                 // Get pixel data
@@ -305,7 +305,7 @@
                     const b = pixels[i + 2];
                     const a = pixels[i + 3];
                     // Count only fully visible dark red pixels
-                    if (r >= 100 && g < 50 && b < 50 && a > 0) {
+                    if (r === 136 && g === 0 && b === 0 && a === 255) {
                         redPixelCount++;
                     }
                 }
@@ -394,7 +394,28 @@
                         ctx.font = '24px sans-serif';
                         ctx.fillText('Click to restart', canvas.width / 2, canvas.height / 2 + 50);
                     } else {
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const pixels = imageData.data;
+                        let redPixelCount = 0;
+                        for (let i = 0; i < pixels.length; i += 4) {
+                            const r = pixels[i];
+                            const g = pixels[i + 1];
+                            const b = pixels[i + 2];
+                            const a = pixels[i + 3];
+                            // Count only fully visible dark red pixels
+                            if (r === 136 && g === 0 && b === 0 && a === 255) {
+                                redPixelCount++;
+                            }
+                        }
+                        const totalPixels = canvas.width * canvas.height;
+                        const coverage = redPixelCount / totalPixels;
                         ctx.fillText('Game Over - Click to Restart', canvas.width / 2, canvas.height / 2);
+                        ctx.save();
+                        ctx.font = '24px Arial';
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Coverage: ' + (coverage * 100).toFixed(1) + '%', canvas.width / 2, canvas.height / 2 + 40);
+                        ctx.restore();
                     }
                 }
             }
