@@ -45,7 +45,7 @@
                     shootInterval: 2000,
                     bulletSpeed: 3,
                     splatterSize: 50,
-                    maxEnemies: 10,
+                    maxEnemies: 5,
                     maxBounces: 2
                 },
                 medium: {
@@ -54,7 +54,7 @@
                     shootInterval: 1500,
                     bulletSpeed: 5,
                     splatterSize: 30,
-                    maxEnemies: 20,
+                    maxEnemies: 10,
                     maxBounces: 3
                 },
                 hard: {
@@ -63,7 +63,7 @@
                     shootInterval: 1200,
                     bulletSpeed: 7,
                     splatterSize: 20,
-                    maxEnemies: 30,
+                    maxEnemies: 15,
                     maxBounces: 5
                 },
                 impossible: {
@@ -72,7 +72,7 @@
                     shootInterval: 1000,
                     bulletSpeed: 10,
                     splatterSize: 10,
-                    maxEnemies: Infinity,
+                    maxEnemies: 30,
                     maxBounces: Infinity
                 }
             };
@@ -127,7 +127,6 @@
             }
             function trySpawnEnemy() {
                 const maxEnemies = settings.maxEnemies;
-                if (enemies.length >= maxEnemies) return;
                 const scarcityFactor = Math.max(0, (maxEnemies - enemies.length) / maxEnemies);
                 if (Math.random() < settings.spawnChance * (scarcityFactor) * 10) {
                     let spawnX, spawnY;
