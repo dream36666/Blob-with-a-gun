@@ -7,7 +7,7 @@
         body { display: flex; height: 100vh; justify-content: center; align-items: center; background-color: #111; color: white; font-family: sans-serif; margin: 0; overflow: hidden; flex-direction: column; }
         canvas { display: none; }
         #menu { display: flex; flex-direction: row; align-items: center; gap: 16px; }
-        button { font-size: 2rem; margin-top: 10px; padding: 0.5rem 1rem; background: #212121; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .difficultyButton { font-size: 2rem; margin-top: 10px; padding: 0.5rem 1rem; background: #212121; color: white; border: none; border-radius: 8px; cursor: pointer; }
         .title { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 100px; color: white; background: rgba(0, 0, 0, 0); padding: 10px; border-radius: 5px; font-family: "Bungee Spice", sans-serif; display: block; max-width: 90%; text-align: center; white-space: nowrap; }
         .info { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 20px; color: white; background: rgba(0, 0, 0 ,0); padding: 5px; border-radius: 5px; font-family: sans-serif; display: block; max-width: 90%; text-align: center; }
         #menu button:hover { color: white; transform: scale(1.05); transition: transform 0.3s; }
@@ -15,21 +15,76 @@
         #startMedium { background-color: #2196F3; }
         #startHard { background-color: #FF9800; }
         #startImpossible { background-color: #F44336; }
+        #startCustom { background-color: #888; }
+        #actuallyStartCustom { background-color: #4CAF50; }
         #menu button:active { transform: scale(0.95); }
+        #customSettingsForm { display: none; flex-direction: column; align-items: center; gap: 10px; border-radius: 10px; color: white; }
+        .customSettingsInput { display: none; width: 400px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #222; color: white; font-size: 16px; }
+        #customSettingsInputWrapper { display: none; flex-direction: column; align-items: center; gap: 10px; }
+        .customSettingsInputRow { display: flex; flex-direction: row; align-items: center; gap: 10px; }
     </style>
 </head>
 <body>
-    <div class="title">BLOB WITH A GUN<br></div>
-    <div class="info">v1.0.0<br>Ben Messer & Joshua Harding<br>Goal: Cover the entire battlefield in your enemy's blood<br>Press a button to start</div>
-    <div id="menu">
-        <button id="startEasy" onclick="startGame('easy')">Easy</button>
-        <button id="startMedium" onclick="startGame('medium')">Medium</button>
-        <button id="startHard" onclick="startGame('hard')">Hard</button>
-        <button id="startImpossible" onclick="startGame('impossible')">Impossible</button>
+    <div id="ui-scale-wrapper">
+        <div class="title">BLOB WITH A GUN<br></div>
+        <div class="info">v1.0.1-beta<br>Ben Messer & Joshua Harding<br>Goal: Cover 90% of the battlefield in your enemy's blood<br>Press a button to start</div>
+        <div id="menu">
+            <button id="startEasy" class="difficultyButton" onclick="startGame('easy')">Easy</button>
+            <button id="startMedium" class="difficultyButton" onclick="startGame('medium')">Medium</button>
+            <button id="startHard" class="difficultyButton" onclick="startGame('hard')">Hard</button>
+            <button id="startImpossible" class="difficultyButton" onclick="startGame('impossible')">Impossible</button>
+            <button id="startCustom" class="difficultyButton" onclick="startCustom()">Custom</button>
+        </div>
+        <form id="customSettingsForm">
+            <h1>Custom Game Settings</h1>
+            <h2 style="margin-top: -10px">Input your settings:</h2>
+            <div id="customSettingsInputWrapper">
+                <div id="customSettingsInputRow1" class="customSettingsInputRow">
+                    <input type="number" id="enemySpeed" class="customSettingsInput" placeholder="Enemy speed (default: 1.5)" step="0.1" autocomplete="off">
+                    <input type="number" id="playerSpeed" class="customSettingsInput" placeholder="Player speed (default: 4)" step="0.1" autocomplete="off">
+                </div>
+                <div id="customSettingsInputRow2" class="customSettingsInputRow">
+                    <input type="number" id="spawnChance" class="customSettingsInput" placeholder="Enemy spawn chance (default: 0.05)" step="0.01" autocomplete="off">
+                    <input type="number" id="shootInterval" class="customSettingsInput" placeholder="Enemy shoot cooldown (default: 1500)" step="100" autocomplete="off">
+                    <input type="number" id="enemyBulletSpeed" class="customSettingsInput" placeholder="Enemy Bullet Speed (default: 5)" step="0.1" autocomplete="off">
+                </div>
+                <div id="customSettingsInputRow3" class="customSettingsInputRow">
+                    <input type="number" id="splatterSize" class="customSettingsInput" placeholder="Blood size (default: 100)" step="1" autocomplete="off">
+                    <input type="number" id="maxEnemies" class="customSettingsInput" placeholder="Max enemies (default: 10)" step="1" autocomplete="off">
+                </div>
+                <div id="customSettingsInputRow4" class="customSettingsInputRow">
+                    <input type="number" id="maxBounces" class="customSettingsInput" placeholder="Bullet bounces before despawn (default: 3)" step="1" autocomplete="off">
+                </div>
+            </div>
+            <button type="button" id="actuallyStartCustom" class="difficultyButton" onclick="startGameWithCustomSettings()">Start</button>
+        </form>
+        <canvas id="game"></canvas>
     </div>
-    <canvas id="game"></canvas>
     <script>
-        function startGame(gameDifficulty) {
+        function startCustom() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('customSettingsForm').style.display = 'flex';
+            document.getElementById('customSettingsInputWrapper').style.display = 'flex';
+            const inputs = document.querySelectorAll('.customSettingsInput');
+            inputs.forEach(input => {
+                input.style.display = 'flex';
+            });
+        }
+        function startGameWithCustomSettings() {
+            const settings = {
+                enemySpeed: parseFloat(document.getElementById('enemySpeed').value) || 1.5,
+                playerSpeed: parseFloat(document.getElementById('playerSpeed').value) || 4,
+                spawnChance: parseFloat(document.getElementById('spawnChance').value) || 0.05,
+                shootInterval: parseInt(document.getElementById('shootInterval').value) || 1500,
+                enemyBulletSpeed: parseFloat(document.getElementById('enemyBulletSpeed').value) || 5,
+                splatterSize: parseFloat(document.getElementById('splatterSize').value) || 100,
+                maxEnemies: parseInt(document.getElementById('maxEnemies').value) || 10,
+                maxBounced: parseInt(document.getElementById('maxBounces').value) || 3
+            };
+            document.getElementById('customSettingsForm').style.display = 'none';
+            startGame("custom", settings);
+        }
+        function startGame(gameDifficulty, customSettings = null) {
             document.querySelector(".title").style.display = "none";
             document.querySelector(".info").style.display = "none";
             document.getElementById('menu').style.display = 'none';
@@ -74,20 +129,13 @@
                     splatterSize: 30,
                     maxEnemies: 30,
                     maxBounces: Infinity
-                }
+                },
+                custom: customSettings
             };
             const settings = difficultySettings[gameDifficulty];
             const bullets = [];
             const bloodSplatters = [];
-            const enemies = [{
-                x: 100,
-                y: 100,
-                radius: 20,
-                speed: settings.enemySpeed,
-                alive: true,
-                lastShotTime: 0,
-                shootInterval: settings.shootInterval
-            }];
+            const enemies = [];
             let aliveEnemies = enemies.filter(e => e.alive).length;
             let keys = {};
             let mouse = { x: 0, y: 0 };
@@ -98,7 +146,7 @@
                 x: canvas.width / 2,
                 y: canvas.height / 2,
                 radius: 20,
-                speed: 4
+                speed: settings.playerSpeed || 4
             };
             canvas.addEventListener('mousemove', e => {
                 mouse.x = e.clientX;
@@ -361,15 +409,6 @@
                 bullets.length = 0;
                 enemies.length = 0;
                 bloodSplatters.length = 0;
-                enemies.push({
-                    x: 100,
-                    y: 100,
-                    radius: 20,
-                    speed: 2,
-                    alive: true,
-                    lastShotTime: 0,
-                    shootInterval: 1000
-                });
                 gameOver = false;
                 youWin = false;
             }
