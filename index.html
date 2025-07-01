@@ -20,7 +20,7 @@
 </head>
 <body>
     <div class="title">BLOB WITH A GUN<br></div>
-    <div class="info">v1.0.0<br>Ben Messer & Joshua Harding<br>Goal: Cover the entire battlefield in your enemy's blood<br>Enemys will spawn when your bullet hits a wall<br>Press a button to start</div>
+    <div class="info">v1.0.0<br>Ben Messer & Joshua Harding<br>Goal: Cover the entire battlefield in your enemy's blood<br>Press a button to start</div>
     <div id="menu">
         <button id="startEasy" onclick="startGame('easy')">Easy</button>
         <button id="startMedium" onclick="startGame('medium')">Medium</button>
@@ -43,8 +43,8 @@
                     enemySpeed: 1,
                     spawnChance: 0.02,
                     shootInterval: 2000,
-                    bulletSpeed: 3,
-                    splatterSize: 50,
+                    enemyBulletSpeed: 3,
+                    splatterSize: 150,
                     maxEnemies: 5,
                     maxBounces: 2
                 },
@@ -52,8 +52,8 @@
                     enemySpeed: 1.5,
                     spawnChance: 0.05,
                     shootInterval: 1500,
-                    bulletSpeed: 5,
-                    splatterSize: 30,
+                    enemyBulletSpeed: 5,
+                    splatterSize: 100,
                     maxEnemies: 10,
                     maxBounces: 3
                 },
@@ -61,8 +61,8 @@
                     enemySpeed: 2,
                     spawnChance: 0.08,
                     shootInterval: 1200,
-                    bulletSpeed: 7,
-                    splatterSize: 20,
+                    enemyBulletSpeed: 7,
+                    splatterSize: 50,
                     maxEnemies: 15,
                     maxBounces: 5
                 },
@@ -70,8 +70,8 @@
                     enemySpeed: 2.5,
                     spawnChance: 0.10,
                     shootInterval: 1000,
-                    bulletSpeed: 10,
-                    splatterSize: 10,
+                    enemyBulletSpeed: 10,
+                    splatterSize: 30,
                     maxEnemies: 30,
                     maxBounces: Infinity
                 }
@@ -88,6 +88,7 @@
                 lastShotTime: 0,
                 shootInterval: settings.shootInterval
             }];
+            let aliveEnemies = enemies.filter(e => e.alive).length;
             let keys = {};
             let mouse = { x: 0, y: 0 };
             let youWin = false;
@@ -118,8 +119,8 @@
                 bullets.push({
                     x: fromX + Math.cos(angle) * offset,
                     y: fromY + Math.sin(angle) * offset,
-                    vx: Math.cos(angle) * settings.bulletSpeed,
-                    vy: Math.sin(angle) * settings.bulletSpeed,
+                    vx: Math.cos(angle) * (owner === 'player' ? Math.min(10, settings.enemyBulletSpeed * 2) : settings.enemyBulletSpeed),
+                    vy: Math.sin(angle) * (owner === 'player' ? Math.min(10, settings.enemyBulletSpeed * 2) : settings.enemyBulletSpeed),
                     radius: BASE_BULLET_RADIUS,
                     owner: owner,
                     bounces: 0
@@ -127,8 +128,9 @@
             }
             function trySpawnEnemy() {
                 const maxEnemies = settings.maxEnemies;
-                const scarcityFactor = Math.max(0, (maxEnemies - enemies.length) / maxEnemies);
-                if (Math.random() < settings.spawnChance * (scarcityFactor) * 5) {
+                if (aliveEnemies >= maxEnemies) return;
+                const scarcityFactor = Math.max(1, (aliveEnemies));
+                if (Math.random() < settings.spawnChance / (scarcityFactor) * 5) {
                     let spawnX, spawnY;
                     const safeRadius = 300; // Minimum distance from player
                     do {
@@ -158,6 +160,10 @@
                 ) {
                     gameOver = true;
                     return;
+                }
+                aliveEnemies = enemies.filter(e => e.alive).length;
+                if (aliveEnemies <= 0) {
+                    trySpawnEnemy();
                 }
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     const b = bullets[i];
@@ -230,14 +236,45 @@
                 checkBloodFlood();
             }
             function checkBloodFlood() {
-                const totalArea = canvas.width * canvas.height;
-                const bloodArea = bloodSplatters.reduce((sum, s) => sum + Math.PI * s.radius * s.radius, 0);
-                const coverage = bloodArea / totalArea;
-                if (coverage >= 0.8 && !youWin) {
-                    youWin = true;
-                    gameOver = true; // Stops everything
-                }
-            }
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = canvas.width;
+    offCanvas.height = canvas.height;
+    const offCtx = offCanvas.getContext('2d');
+
+    // Draw each blood splatter
+    for (const s of bloodSplatters) {
+        offCtx.beginPath();
+        offCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        offCtx.fillStyle = '#800'; // match your blood color
+        offCtx.fill();
+    }
+
+    // Get pixel data
+    const imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+    const pixels = imageData.data;
+    let redPixelCount = 0;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const a = pixels[i + 3];
+
+        // Count only fully visible dark red pixels
+        if (r >= 100 && g < 50 && b < 50 && a > 0) {
+            redPixelCount++;
+        }
+    }
+
+    const totalPixels = canvas.width * canvas.height;
+    const coverage = redPixelCount / totalPixels;
+
+    if (coverage >= 0.8 && !youWin) {
+        youWin = true;
+        gameOver = true;
+    }
+}
+
             function mergeBullets(arr) {
                 for (let i = 0; i < arr.length; i++) {
                     const a = arr[i];
