@@ -44,15 +44,15 @@
                     <input type="number" id="playerSpeed" class="customSettingsInput" placeholder="Player speed (default: 4)" step="0.1" autocomplete="off">
                 </div>
                 <div id="customSettingsInputRow2" class="customSettingsInputRow">
-                    <input type="number" id="spawnChance" class="customSettingsInput" placeholder="Enemy spawn chance (default: 0.05)" step="0.01" autocomplete="off">
                     <input type="number" id="shootInterval" class="customSettingsInput" placeholder="Enemy shoot cooldown (default: 1500)" step="100" autocomplete="off">
                     <input type="number" id="enemyBulletSpeed" class="customSettingsInput" placeholder="Enemy Bullet Speed (default: 5)" step="0.1" autocomplete="off">
                 </div>
                 <div id="customSettingsInputRow3" class="customSettingsInputRow">
-                    <input type="number" id="splatterSize" class="customSettingsInput" placeholder="Blood size (default: 100)" step="1" autocomplete="off">
+                    <input type="number" id="spawnChance" class="customSettingsInput" placeholder="Enemy spawn chance (default: 0.05)" step="0.01" autocomplete="off">
                     <input type="number" id="maxEnemies" class="customSettingsInput" placeholder="Max enemies (default: 10)" step="1" autocomplete="off">
                 </div>
                 <div id="customSettingsInputRow4" class="customSettingsInputRow">
+                    <input type="number" id="splatterSize" class="customSettingsInput" placeholder="Blood size (default: 100)" step="1" autocomplete="off">
                     <input type="number" id="maxBounces" class="customSettingsInput" placeholder="Bullet bounces before despawn (default: 3)" step="1" autocomplete="off">
                 </div>
             </div>
@@ -281,40 +281,37 @@
                         enemy.lastShotTime = now;
                     }
                 }
-                checkBloodFlood();
-            }
-            function checkBloodFlood() {
-                const offCanvas = document.createElement('canvas');
-                offCanvas.width = canvas.width;
-                offCanvas.height = canvas.height;
-                const offCtx = offCanvas.getContext('2d');
-                // Draw each blood splatter
-                for (const s of bloodSplatters) {
-                    offCtx.beginPath();
-                    offCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-                    offCtx.fillStyle = '#800000'; // match your blood color
-                    offCtx.fill();
-                }
-                // Get pixel data
-                const imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
-                const pixels = imageData.data;
-                let redPixelCount = 0;
-                for (let i = 0; i < pixels.length; i += 4) {
-                    const r = pixels[i];
-                    const g = pixels[i + 1];
-                    const b = pixels[i + 2];
-                    const a = pixels[i + 3];
-                    // Count only fully visible dark red pixels
-                    if (r === 136 && g === 0 && b === 0 && a === 255) {
-                        redPixelCount++;
-                    }
-                }
-                const totalPixels = canvas.width * canvas.height;
-                const coverage = redPixelCount / totalPixels;
-                if (coverage >= 0.9 && !youWin) {
+                if (checkBloodFlood >= 0.9 && !youWin) {
                     youWin = true;
                     gameOver = true;
                 }
+            }
+            function checkBloodFlood() {
+                const sampleStep = 10;
+                const width = canvas.width;
+                const height = canvas.height;
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const pixels = imageData.data;
+                let redPixelCount = 0;
+                let sampleCount = 0;
+                for (let y = 0; y < height; y += sampleStep) {
+                    for (let x = 0; x < width; x += sampleStep) {
+                        const index = (y * width + x) * 4;
+                        const r = pixels[index];
+                        const g = pixels[index + 1];
+                        const b = pixels[index + 2];
+                        const a = pixels[index + 3];
+
+                        // Approximate dark red check — not exact match for performance and tolerance
+                        if (r >= 130 && r <= 140 && g < 20 && b < 20 && a > 200) {
+                            redPixelCount++;
+                        }
+                        sampleCount++;
+                    }
+                }
+                const coverage = redPixelCount / sampleCount;
+                console.log("Coverage:", (coverage * 100).toFixed(1) + "%");
+                return coverage;
             }
             function mergeBullets(arr) {
                 for (let i = 0; i < arr.length; i++) {
@@ -394,21 +391,7 @@
                         ctx.font = '24px sans-serif';
                         ctx.fillText('Click to restart', canvas.width / 2, canvas.height / 2 + 50);
                     } else {
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const pixels = imageData.data;
-                        let redPixelCount = 0;
-                        for (let i = 0; i < pixels.length; i += 4) {
-                            const r = pixels[i];
-                            const g = pixels[i + 1];
-                            const b = pixels[i + 2];
-                            const a = pixels[i + 3];
-                            // Count only fully visible dark red pixels
-                            if (r === 136 && g === 0 && b === 0 && a === 255) {
-                                redPixelCount++;
-                            }
-                        }
-                        const totalPixels = canvas.width * canvas.height;
-                        const coverage = redPixelCount / totalPixels;
+                        coverage = checkBloodFlood();
                         ctx.fillText('Game Over - Click to Restart', canvas.width / 2, canvas.height / 2);
                         ctx.save();
                         ctx.font = '24px Arial';
