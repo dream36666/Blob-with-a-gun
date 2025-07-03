@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8"/>
     <title>Blob with a Gun</title>
     <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet">
     <style>
@@ -22,12 +23,14 @@
         .customSettingsInput { display: none; width: 400px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #222; color: white; font-size: 16px; }
         #customSettingsInputWrapper { display: none; flex-direction: column; align-items: center; gap: 10px; }
         .customSettingsInputRow { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+        #percentage { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 50px; color: white; display: none; }
     </style>
 </head>
 <body>
     <div id="ui-scale-wrapper">
         <div class="title">BLOB WITH A GUN<br></div>
-        <div class="info">v1.0.1-beta<br>Ben Messer & Joshua Harding<br>Goal: Cover 90% of the battlefield in your enemy's blood<br>Press a button to start</div>
+        <div class="info">v1.0.1-beta<br>Joshua Harding & Ben Messer<br>Goal: Cover 90% of the battlefield in your enemy's blood<br>Press a button to start</div>
+        <div id="percentage">0%</div>
         <div id="menu">
             <button id="startEasy" class="difficultyButton" onclick="startGame('easy')">Easy</button>
             <button id="startMedium" class="difficultyButton" onclick="startGame('medium')">Medium</button>
@@ -88,11 +91,15 @@
             document.querySelector(".title").style.display = "none";
             document.querySelector(".info").style.display = "none";
             document.getElementById('menu').style.display = 'none';
+            document.getElementById("percentage").style.display = 'flex';
             const canvas = document.getElementById('game');
             const ctx = canvas.getContext('2d');
             canvas.style.display = 'block'; // Show canvas
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            const BASE_WIDTH = 1920;
+            const BASE_HEIGHT = 1080;
+            const unitScale = Math.min(canvas.width / BASE_WIDTH, canvas.height / BASE_HEIGHT);
             const difficultySettings = {
                 easy: {
                     enemySpeed: 1,
@@ -281,7 +288,8 @@
                         enemy.lastShotTime = now;
                     }
                 }
-                if (checkBloodFlood >= 0.9 && !youWin) {
+                coverage = checkBloodFlood();
+                if (coverage >= 0.9 && !youWin) {
                     youWin = true;
                     gameOver = true;
                 }
@@ -301,7 +309,6 @@
                         const g = pixels[index + 1];
                         const b = pixels[index + 2];
                         const a = pixels[index + 3];
-
                         // Approximate dark red check — not exact match for performance and tolerance
                         if (r >= 130 && r <= 140 && g < 20 && b < 20 && a > 200) {
                             redPixelCount++;
@@ -346,6 +353,9 @@
                         }
                     }
                 }
+            }
+            function toUnit(pixels) {
+                return pixels * unitScale;
             }
             function draw() {
                 ctx.fillStyle = '#111';
